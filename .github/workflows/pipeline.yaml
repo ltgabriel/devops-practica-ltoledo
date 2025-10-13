@@ -1,0 +1,89 @@
+# .github/workflows/pipeline.yml
+name: pipeline Django DevOps
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+# Primer job: compilación y pruebas
+jobs:
+  build-and-test:
+    name: Build, Test & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Migrations
+        run: python manage.py migrate
+
+      - name: Run Unit Tests
+        run: python manage.py test
+
+      - name: Lint code
+        run: |
+          pip install flake8
+          flake8 .
+# Segundo job: construir y subir la imagen Docker
+  docker-build:
+    name: Build & Push Docker
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker image
+        run: docker build -t devops-django .
+
+      - name: Push Docker image
+        run: docker tag devops-django ${{ secrets.DOCKER_USERNAME }}/devops-django:latest
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/devops-django:latest
+# Tercer job: desplegar en Kubernetes ( local en Minikube)        
+  deploy-k8s:
+    name: Deploy to Minikube
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.30.0'  # o la versión que tengas instalada
+
+      - name: Deploy Django app to Kubernetes
+        run: |
+          # Crear un Deployment con 2 réplicas
+          kubectl create deployment devops-django --image=${{ secrets.DOCKER_USERNAME }}/devops-django:latest --replicas=2 --dry-run=client -o yaml | kubectl apply -f -
+
+          # Exponer el Deployment en el puerto 8000
+          kubectl expose deployment devops-django --type=NodePort --port=8000 --target-port=8000 --dry-run=client -o yaml | kubectl apply -f -
+
+          # Verificar pods
+          kubectl get pods
+
+          # Obtener URL del servicio
+          minikube service devops-django --url
