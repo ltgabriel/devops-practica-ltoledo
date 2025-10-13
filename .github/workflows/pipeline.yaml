@@ -1,6 +1,6 @@
-#AUTOR LORENZO T
-# .github/workflows/pipeline.yml
+# AUTOR LORENZO T
 name: pipeline Django DevOps
+
 on:
   push:
     branches:
@@ -8,6 +8,7 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
   # Primer job: compilación y pruebas
   build-and-test:
@@ -37,7 +38,7 @@ jobs:
       - name: Lint code
         run: |
           pip install flake8
-          flake8 . || true   # <- esto evita que errores de estilo rompan el pipeline
+          flake8 . || true   # evita que errores de estilo rompan el pipeline
 
   # Segundo job: construir y subir la imagen Docker
   docker-build:
@@ -63,9 +64,9 @@ jobs:
           docker tag devops-django ${{ secrets.DOCKER_USERNAME }}/devops-django:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/devops-django:latest
 
-  # Tercer job: desplegar en Kubernetes (local en Minikube)
+  # Tercer job: desplegar en Kubernetes con Kind (cluster temporal)
   deploy-k8s:
-    name: Deploy to Minikube
+    name: Deploy to Kubernetes (Kind)
     runs-on: ubuntu-latest
     needs: docker-build
 
@@ -73,21 +74,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
+      # Levanta un cluster temporal de Kubernetes con Kind
+      - name: Set up Kind cluster
+        uses: helm/kind-action@v1.8.0
         with:
-          version: 'v1.30.0'
+          cluster_name: devops-cluster
 
+      # Configura kubectl (ya viene configurado con Kind)
+      - name: Verify cluster
+        run: kubectl get nodes
+
+      # Crea el Deployment y el Service
       - name: Deploy Django app to Kubernetes
         run: |
-          # Crear un Deployment con 2 réplicas
-          kubectl create deployment devops-django --image=${{ secrets.DOCKER_USERNAME }}/devops-django:latest --replicas=2 --dry-run=client -o yaml | kubectl apply -f -
+          echo " Desplegando la aplicación en el cluster Kind..."
+          
+          kubectl create deployment devops-django \
+            --image=${{ secrets.DOCKER_USERNAME }}/devops-django:latest \
+            --replicas=2 --dry-run=client -o yaml | kubectl apply -f -
 
-          # Exponer el Deployment en el puerto 8000
-          kubectl expose deployment devops-django --type=NodePort --port=8000 --target-port=8000 --dry-run=client -o yaml | kubectl apply -f -
+          kubectl expose deployment devops-django \
+            --type=NodePort --port=8000 --target-port=8000 \
+            --dry-run=client -o yaml | kubectl apply -f -
 
-          # Verificar pods
-          kubectl get pods
+          echo " Despliegue creado correctamente. Mostrando recursos:"
+          kubectl get all -o wide
 
-          # Obtener URL del servicio
-          minikube service devops-django --url
+      # (Opcional) Verifica que los pods estén corriendo
+      - name: Wait for Pods
+        run: |
+          echo "⏳ Esperando que los Pods estén listos..."
+          kubectl wait --for=condition=Ready pod -l app=devops-django --timeout=120s
+          kubectl get pods -o wide
