@@ -1,4 +1,4 @@
-#AUTOR LORENZO
+#AUTOR LORENZO T
 # .github/workflows/pipeline.yml
 name: pipeline Django DevOps
 on:
