@@ -58,8 +58,10 @@ jobs:
         run: docker build -t devops-django .
 
       - name: Push Docker image
-        run: docker tag devops-django ${{ secrets.DOCKER_USERNAME }}/devops-django:latest
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/devops-django:latest
+        run: |
+          docker tag devops-django ${{ secrets.DOCKER_USERNAME }}/devops-django:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/devops-django:latest
+
 # Tercer job: desplegar en Kubernetes ( local en Minikube)        
   deploy-k8s:
     name: Deploy to Minikube
