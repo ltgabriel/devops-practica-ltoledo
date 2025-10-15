@@ -1,6 +1,6 @@
 import environ
 from pathlib import Path
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -74,10 +74,17 @@ WSGI_APPLICATION = 'demo.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# Ruta de la DB flexible: usar variable de entorno si existe, si no ruta local
+db_path = os.getenv('DJANGO_DB_PATH', BASE_DIR / 'db' / 'db.sqlite3')
+
+# Creara una carpeta si no existe
+db_path_parent = Path(db_path).parent
+db_path_parent.mkdir(parents=True, exist_ok=True)
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': '/app/db/db.sqlite3',  # Ruta absoluta dentro del contenedor
+        'NAME': str(db_path),
     }
 }
 

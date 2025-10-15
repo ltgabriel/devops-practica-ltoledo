@@ -1,4 +1,4 @@
-# AUTOR LORENZO 
+# AUTOR LORENZO
 name: pipeline Django DevOps
 
 on:
@@ -31,6 +31,8 @@ jobs:
 
       - name: Run Migrations
         run: python manage.py migrate
+        env:
+          DJANGO_DB_PATH: /tmp/db.sqlite3  # ruta temporal para CI
 
       - name: Run Unit Tests with Coverage
         run: |
@@ -47,7 +49,7 @@ jobs:
       - name: Lint code
         run: |
           pip install flake8
-          flake8 . || true   # evita que errores de estilo rompan el pipeline
+          flake8 . || true  # no rompe el pipeline por errores de estilo
 
   # Segundo job: construir y subir la imagen Docker
   docker-build:
@@ -98,8 +100,7 @@ jobs:
 
       - name: Deploy Django app to Kubernetes
         run: |
-          echo " Desplegando la aplicación en el cluster Kind..."
-          
+          echo "Desplegando la aplicación en el cluster Kind..."
           kubectl create deployment devops-django \
             --image=${{ secrets.DOCKER_USERNAME }}/devops-django:latest \
             --replicas=2 --dry-run=client -o yaml | kubectl apply -f -
@@ -108,7 +109,7 @@ jobs:
             --type=NodePort --port=8000 --target-port=8000 \
             --dry-run=client -o yaml | kubectl apply -f -
 
-          echo " Despliegue creado correctamente. Mostrando recursos:"
+          echo "Despliegue creado correctamente. Mostrando recursos:"
           kubectl get all -o wide
 
       - name: Wait for Pods
