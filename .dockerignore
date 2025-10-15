@@ -1,0 +1,15 @@
+# Ignorar base de datos local
+db.sqlite3
+
+# Ignorar entorno virtual
+venv/
+
+# Ignorar archivos de Git
+.git
+.gitignore
+
+# Ignorar logs y archivos temporales
+*.log
+__pycache__/
+*.pyc
+*.pyo
