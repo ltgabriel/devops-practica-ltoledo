@@ -1,139 +1,213 @@
-# Demo Devops Python
+# Ejercicio práctico de DevOps 
 
-This is a simple application to be used in the technical test of DevOps.
+**Autor:** Lorenzo Toledo Gabriel  
+**Práctico:** devsu-devops-python  
+**Tecnologías:** Django 4.2, Python 3.10.9, Docker 28.5.1, Kubernetes (Kind v1.37.0, kubectl v1.34.1), GitHub Actions
 
-## Getting Started
+# Demo DevOps Python
 
-### Prerequisites
+Aplicación para la prueba técnica de **DevOps-devsu**, desarrollada con **Django 4.2** y **Python 3.10.9**, dockerizada y desplegada en **Kubernetes (Kind)**.
 
-- Python 3.11.3
+El proyecto incluye un pipeline  que:
 
-### Installation
+- Compila el código
+- Ejecuta pruebas unitarias
+- Ejecuta análisis de código estático (lint con flake8)
+- Genera cobertura de código
+- Construye y sube la imagen Docker
+- Escanea vulnerabilidades con Trivy
+- Despliega la aplicación en un cluster Kind con 2 réplicas
+- Configura secretos y variables de entorno
+- Realiza comprobación de estado de pods
 
-Clone this repo.
+---
+
+## Primeros pasos
+
+### Requisitos previos
+
+- Python 3.10.9
+- Django 4.2
+- Docker 28.5.1
+- Kubernetes (kubectl v1.34.1, Minikube v1.37.0)
+- Git 2.51
+
+### Instalación
+
+Clonar este repositorio:
 
 ```bash
-git clone https://bitbucket.org/devsu/demo-devops-python.git
+git clone https://github.com/ltgabriel/devops-practica-ltoledo.git
+cd devops-practica-ltoledo
 ```
-
-Install dependencies.
+Instalar dependencias:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Migrate database
-
+Migrar la base de datos:
 ```bash
 py manage.py makemigrations
 py manage.py migrate
 ```
+### Base de datos
 
-### Database
+La base de datos se genera como un archivo SQLite en la ruta principal al ejecutar el proyecto por primera vez; su nombre es db.sqlite3.
 
-The database is generated as a file in the main path when the project is first run, and its name is `db.sqlite3`.
+Se recomienda otorgar permisos de acceso al archivo para su correcto funcionamiento.
+En el pipeline CI/CD se utiliza la ruta temporal /tmp/db.sqlite3 para las pruebas automáticas.
 
-Consider giving access permissions to the file for proper functioning.
+### Uso
 
-## Usage
-
-To run tests you can use this command.
-
+Para ejecutar pruebas unitarias:
 ```bash
 py manage.py test
 ```
 
-To run locally the project you can use this command.
-
+Para ejecutar la aplicación localmente:
 ```bash
 py manage.py runserver
 ```
 
-Open http://localhost:8000/api/ with your browser to see the result.
+Abrir en el navegador: http://localhost:8000/api/
 
-### Features
+Endpoints y pruebas de la API
+### Características
 
-These services can perform,
-
-#### Create User
-
-To create a user, the endpoint **/api/users/** must be consumed with the following parameters:
-
+Estos servicios pueden realizar:
+#### Crear usuario
 ```bash
-  Method: POST
+POST /api/users/
 ```
-
 ```json
 {
-    "dni": "dni",
-    "name": "name"
+  "dni": "12345678",
+  "name": "Juan Perez"
 }
 ```
 
-If the response is successful, the service will return an HTTP Status 200 and a message with the following structure:
-
+Respuesta exitosa (HTTP 200):
 ```json
 {
-    "id": 1,
-    "dni": "dni",
-    "name": "name"
+  "id": 1,
+  "dni": "12345678",
+  "name": "Juan Perez"
 }
 ```
 
-If the response is unsuccessful, we will receive status 400 and the following message:
-
+Error (HTTP 400):
 ```json
 {
-    "detail": "error"
+  "detail": "error"
 }
 ```
-
-#### Get Users
-
-To get all users, the endpoint **/api/users** must be consumed with the following parameters:
-
+#### Obtener todos los usuarios
 ```bash
-  Method: GET
+Método: GET
+GET /api/users/
 ```
-
-If the response is successful, the service will return an HTTP Status 200 and a message with the following structure:
-
+Respuesta exitosa (HTTP 200):
 ```json
 [
-    {
-        "id": 1,
-        "dni": "dni",
-        "name": "name"
-    }
+  {
+    "id": 1,
+    "dni": "12345678",
+    "name": "Juan Perez"
+  }
 ]
 ```
-
-#### Get User
-
-To get an user, the endpoint **/api/users/<id>** must be consumed with the following parameters:
-
+#### Obtener usuario por ID
 ```bash
-  Method: GET
+Método: GET
+GET /api/users/<id>
 ```
-
-If the response is successful, the service will return an HTTP Status 200 and a message with the following structure:
-
+Respuesta exitosa (HTTP 200):
 ```json
 {
-    "id": 1,
-    "dni": "dni",
-    "name": "name"
+  "id": 1,
+  "dni": "12345678",
+  "name": "Juan Perez"
 }
 ```
 
-If the user id does not exist, we will receive status 404 and the following message:
-
+Usuario no encontrado (HTTP 404):
 ```json
 {
-    "detail": "Not found."
+  "detail": "No encontrado."
 }
 ```
+#### Pipeline CI/CD
 
-## License
+El pipeline está definido en .github/workflows/pipeline.yaml y contiene 3 jobs principales:
 
-Copyright © 2023 Devsu. All rights reserved.
+#### Build & Test
+
+Checkout del código
+Instalación de dependencias
+Migración de base de datos en CI (/tmp/db.sqlite3)
+Ejecución de pruebas unitarias y cobertura de código
+Linter con flake8
+
+#### Docker Build & Push
+Construcción de imagen Docker (devops-django:latest)
+Login y push a Docker Hub
+Escaneo de vulnerabilidades con Trivy
+
+#### Deploy a Kubernetes (Kind)
+Setup de cluster Kind temporal
+Despliegue de aplicación con 2 réplicas
+Exposición de servicio vía NodePort
+Comprobación de estado de pods
+Uso de ConfigMaps y Secretos
+
+#### Diagrama del pipeline CI/CD
+
+       GitHub Actions        
+     Disparador: push/main   
+             │       
+        Compilar y    
+        Probar        
+        - Instalar deps
+        - Migraciones 
+        - Pruebas unit
+        - Linter      
+        - Cobertura   
+              │
+        Construir     
+        Imagen Docker 
+        - Construir   
+        - Subir       
+        - Escanear    
+              │
+        Desplegar en   
+        Kubernetes     
+        - Configurar   
+          cluster Kind 
+        - Aplicar      
+        - Exponer      
+        - Comprobar    
+          Pods         
+       
+#### Despliegue en Kubernetes (Kind)
+Se utiliza un cluster local Kind con 2 réplicas de la aplicación.
+Se crean Deployments y Services de tipo NodePort.
+Configuración de Variables de entorno y Secretos a través de ConfigMaps.
+Comprobación de que los pods estén en estado Ready.
+Escalamiento horizontal posible mediante:
+```bash
+kubectl scale deployment devops-django --replicas=N
+```
+#### Buenas prácticas aplicadas
+Variables de entorno para secretos y configuración sensible.
+Separación de entornos locales y CI.
+Linter y cobertura de código para mantener calidad.
+Dockerfile optimizado para reproducibilidad.
+Escaneo de vulnerabilidades de la imagen.
+Kubernetes configurado con al menos 2 réplicas para escalabilidad horizontal.
+Pipeline reproducible y modular.
+Documentación clara y ejemplos de pruebas de endpoints.
+Uso de rutas temporales en CI para evitar interferencia con DB local.
+
+#### Licencia
+Copyright © 2023 Devsu. Todos los derechos reservados.
